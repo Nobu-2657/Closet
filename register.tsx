@@ -84,6 +84,12 @@ const Register = ({ navigation }: Props) => {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.navigate('Login')}
+      >
+        <Ionicons name="arrow-back" size={24} color="black" />
+      </TouchableOpacity>
       <View style={styles.logoContainer}>
         <Image 
             source={require('../images/ClosEt_logo.png')} // ロゴのパスを指定
@@ -175,6 +181,12 @@ const styles = StyleSheet.create({
     padding: 10,
     position: 'absolute',
     right: 0,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    zIndex: 1,
   },
 });
 
