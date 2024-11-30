@@ -53,8 +53,27 @@ app.post('/api/register', async (req, res) => {
 
         await newUser.save();
 
-        res.status(201).json({ message: '登録が完了しました', displayName });
+        // JWTトークンの生成
+        const token = jwt.sign(
+            { userId: newUser.userId },
+            JWT_SECRET,
+            { expiresIn: '1h' } // トークンの有効期限を1時間に設定
+        );
+
+        // パスワードを除いたユーザー情報を作成
+        const userInfo = {
+            id: newUser.userId,
+            email: newUser.email,
+            displayName: newUser.displayName
+        };
+
+        res.status(201).json({
+            message: '登録が完了しました',
+            user: userInfo,
+            token: token
+        });
     } catch (error) {
+        console.error('登録処理中にエラーが発生しました:', error);
         res.status(500).json({ message: 'サーバーエラーが発生しました' });
     }
 });
@@ -88,8 +107,9 @@ app.post('/api/login', async (req, res) => {
             { expiresIn: '1h' } // トークンの有効期限を1時間に設定
         );
 
-        // ユーザー情報からパスワードを除外
+        // ユーザー情報からパスワードを除外し、userIdをidとして明示的に含める
         const { password: _, ...userInfo } = user.toObject();
+        userInfo.id = userInfo.userId; // userIdをidとして明示的に設定
 
         res.json({
             message: 'ログインに成功しました',
