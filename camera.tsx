@@ -1,0 +1,330 @@
+import React, { useState, useEffect } from 'react';
+import { View, TextInput, Button, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
+import config from '@/config';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
+import Slider from '@react-native-community/slider';
+import CustomButton from '../after_register/customButton';
+
+const { width } = Dimensions.get('window');
+const CAMERA_SIZE = width;
+
+const CameraScreen: React.FC = () => {
+    const [permission, requestPermission] = useCameraPermissions();
+    const [camera, setCamera] = useState<CameraView | null>(null);
+    const [photo, setPhoto] = useState<string | null>(null);
+    const [clothesName, setClothesName] = useState('');
+    const [category, setCategory] = useState('');
+    const [temperature, setTemperature] = useState(20);
+    const navigation = useNavigation();
+    const isFocused = useIsFocused();
+
+    useEffect(() => {
+        if (isFocused) {
+            setPhoto(null);
+            setClothesName('');
+            setCategory('');
+            setTemperature(20);
+        }
+    }, [isFocused]);
+
+    if (!permission) {
+        return <View />;
+    }
+
+    if (!permission.granted) {
+        return (
+            <View style={styles.container}>
+                <Button onPress={requestPermission} title="カメラの起動を許可" />
+            </View>
+        );
+    }
+
+    const takePicture = async () => {
+        if (camera) {
+            const photo = await camera.takePictureAsync({ base64: true });
+            if (photo && photo.base64) {
+                setPhoto(photo.base64);
+            }
+        }
+    };
+
+    const selectPicture = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 1,
+            base64: true,
+        });
+        if (!result.canceled && result.assets[0].base64) {
+            setPhoto(result.assets[0].base64);
+        }
+    };
+
+    const uploadPhoto = async () => {
+        if (photo) {
+            try {
+                const userId = await AsyncStorage.getItem('userId');
+                if (!userId) {
+                    throw new Error('User ID not found');
+                }
+                const response = await fetch(`http://${config.serverIP}:3001/api/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image: photo,
+                        userId: userId,
+                        name: clothesName,
+                        category: category,
+                        temperature: temperature
+                    }),
+                });
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                console.log('Photo uploaded successfully:', data);
+                navigation.goBack();
+            } catch (error) {
+                console.error('Error uploading photo:', error);
+            }
+        }
+    };
+
+    if (photo) {
+        return (
+            <ScrollView>
+                <View style={styles.logoContainer}>
+                    <Image source={require('../images/ClosEt_logo.png')} style={styles.logo} />
+                </View>
+                <View style={styles.divider} />
+                <View style={styles.container}>
+                    <View style={styles.inputContainer}>
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            onPress={() => setPhoto(null)}
+                        >
+                            <Ionicons name="arrow-back" size={24} color="black" />
+                        </TouchableOpacity>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="名称"
+                            value={clothesName}
+                            onChangeText={setClothesName}
+                        />
+                    </View>
+                    {photo && (
+                        <Image source={{ uri: `data:image/jpeg;base64,${photo}` }} style={styles.preview} />
+                    )}
+                    <Text style={styles.label}>{temperature}℃</Text>
+                    <View style={styles.sliderContainer}>
+                    <Ionicons name="snow-outline" size={24} color="black" />
+                    <Slider
+                        style={styles.slider}
+                        minimumValue={-10}
+                        maximumValue={40}
+                        step={1}
+                        value={temperature}
+                        onValueChange={setTemperature}
+                        thumbTintColor="white"
+                        minimumTrackTintColor="black"
+                        maximumTrackTintColor="#BFBFBF"
+                    />
+                    <Ionicons name="sunny-outline" size={24} color="black" />
+                    </View>
+                    <View style={styles.pickerContainer}>
+                        <Picker
+                            selectedValue={category}
+                            style={styles.picker}
+                            onValueChange={(itemValue: React.SetStateAction<string>) => setCategory(itemValue)}
+                        >
+                            <Picker.Item label="カテゴリ" value="" />
+                            <Picker.Item label="トップス" value="tops" />
+                            <Picker.Item label="ボトムス" value="bottoms" />
+                            <Picker.Item label="アウター" value="outerwear" />
+                            <Picker.Item label="その他" value="other" />
+                        </Picker>
+                    </View>
+                    <View style={[styles.buttonContainer, { width: '50%' }]}>
+                        <CustomButton
+                            title="収納"
+                            onPress={uploadPhoto}
+                        />
+                    </View>
+                </View>
+            </ScrollView>
+        );
+    }
+
+    return (
+        <View style={styles.cameraContainer}>
+            {isFocused && (
+                <>
+                    <TouchableOpacity
+                        style={styles.cameraBackButton}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Ionicons name="arrow-back" size={24} color="white" />
+                    </TouchableOpacity>
+                    <CameraView
+                        style={styles.camera}
+                        ref={(ref) => setCamera(ref)}
+                    />
+                    <View style={styles.captureButtonContainer}>
+                        <TouchableOpacity style={styles.captureButton} onPress={takePicture} />
+                    </View>
+                    <View style={styles.uploadButtonContainer}>
+                        <TouchableOpacity style={styles.uploadButton} onPress={selectPicture}>
+                            <Ionicons name="images-outline" size={30} color="black" />
+                        </TouchableOpacity>
+                    </View>
+                </>
+            )}
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    camera: {
+        width: CAMERA_SIZE*0.95,
+        height: CAMERA_SIZE*0.95,
+    },
+    container: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    cameraContainer: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+        backgroundColor: 'black',
+    },
+    logoContainer: {
+        alignItems: 'center',
+        padding: 20,
+        backgroundColor: 'white',
+    },
+    logo: {
+        width: 100,
+        height: 50,
+    },
+    divider: {
+        borderBottomColor: '#ccc',
+        borderBottomWidth: 1,
+        marginBottom: 10,
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+        position: 'relative',
+    },
+    cameraBackButton: {
+        position: 'absolute',
+        top: 40,
+        left: 20,
+        zIndex: 1,
+    },
+    backButton: {
+        position: 'absolute',
+        left: 10,
+        zIndex: 1,
+        height: '100%',
+        justifyContent: 'center',
+    },
+    input: {
+        flex: 1,
+        height: 40,
+        paddingRight: 10,
+        textAlign: 'center',
+    },
+    preview: {
+        aspectRatio: 1,
+        width: '100%',
+        height: undefined,
+        alignSelf: 'center',
+    },
+    label: {
+        fontSize: 16,
+        marginTop: 5,
+    },
+    sliderContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '80%',
+        marginBottom: 20,
+    },
+    slider: {
+        flex: 1,
+        marginHorizontal: 10,
+    },
+    pickerContainer: {
+        width: '60%',
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: 'gray',
+        borderRadius: 10,
+        overflow: 'hidden',
+    },
+    picker: {
+        width: '100%',
+        height: 50,
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        width: '100%',
+    },
+    button: {
+        backgroundColor: 'blue',
+        padding: 15,
+        borderRadius: 5,
+    },
+    buttonText: {
+        color: 'white',
+        fontSize: 18,
+    },
+    captureButtonContainer: {
+        position: 'absolute',
+        bottom: 70,
+        alignSelf: 'center',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    captureButton: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: 'white',
+        borderWidth: 5,
+        borderColor: 'rgba(255, 255, 255, 0.8)',
+    },
+    uploadButtonContainer:{
+        position: 'absolute',
+        bottom: 70,
+        alignSelf: 'center',
+        justifyContent: 'center',
+        alignItems: 'center',
+        right: '15%',
+    },
+    uploadButton: {
+        width: 70,
+        height: 70,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        borderRadius: 35,
+    },
+});
+
+export default CameraScreen;
