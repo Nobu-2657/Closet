@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Button, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, TextInput, Button, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Dimensions, Platform } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import config from '@/config';
 import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import Slider from '@react-native-community/slider';
@@ -111,7 +111,7 @@ const CameraScreen: React.FC = () => {
                             style={styles.backButton}
                             onPress={() => setPhoto(null)}
                         >
-                            <Ionicons name="arrow-back" size={24} color="black" />
+                            <AntDesign name="left" size={24} color="black" />
                         </TouchableOpacity>
                         <TextInput
                             style={styles.input}
@@ -171,7 +171,7 @@ const CameraScreen: React.FC = () => {
                         style={styles.cameraBackButton}
                         onPress={() => navigation.goBack()}
                     >
-                        <Ionicons name="arrow-back" size={24} color="white" />
+                        <AntDesign name="left" size={24} color="white" />
                     </TouchableOpacity>
                     <CameraView
                         style={styles.camera}
@@ -269,16 +269,30 @@ const styles = StyleSheet.create({
         marginHorizontal: 10,
     },
     pickerContainer: {
-        width: '60%',
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: 'gray',
-        borderRadius: 10,
-        overflow: 'hidden',
+        ...Platform.select({
+            ios: {
+                width: '60%',
+                marginBottom: 20,
+            },
+            android: {
+                width: '60%',
+                marginBottom: 20,
+                borderWidth: 1,
+                borderColor: 'gray',
+                borderRadius: 10,
+                overflow: 'hidden',
+            },
+        }),
     },
     picker: {
-        width: '100%',
-        height: 50,
+        ...Platform.select({
+            ios: {
+                width: '100%',
+            },
+            android: {
+                width: '100%',
+            },
+        }),
     },
     buttonContainer: {
         flexDirection: 'row',
