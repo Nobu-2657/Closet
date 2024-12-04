@@ -38,9 +38,13 @@ const Login = ({ navigation }: Props) => {
         });
         const data = await response.json();
         if (response.ok) {
-          Alert.alert('成功', data.message || 'ログインに成功しました');
-          if (data.user && data.user.displayName) {
-            await AsyncStorage.setItem('displayName', data.user.displayName);
+          if (data.user) {
+            if (data.user.displayName) {
+              await AsyncStorage.setItem('displayName', data.user.displayName);
+            }
+            if (data.user.id) {
+              await AsyncStorage.setItem('userId', data.user.id);
+            }
           }
           if (data.token) {
             await AsyncStorage.setItem('userToken', data.token);
@@ -99,10 +103,11 @@ const Login = ({ navigation }: Props) => {
 
 const styles = StyleSheet.create({
     container: {
-        padding: 20,
-        backgroundColor: 'white',
-        justifyContent: 'center',
-        alignItems: 'center',
+      flex: 1,
+      padding: 20,
+      backgroundColor: 'white',
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     logoContainer: {
       alignItems: 'center', // ロゴを中央揃え
@@ -110,15 +115,7 @@ const styles = StyleSheet.create({
     logo: {
       width: 300, // ロゴの幅を指定
       height: 100, // ロゴの高さを指定
-      marginTop: 120,
       marginBottom: 80, // ロゴとタイトルの間にスペースを追加
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      marginBottom: 20,
-      textAlign: 'center',
-      color: 'black'
     },
     input: {
         height: 40,
