@@ -352,9 +352,11 @@ const ClosetScreen = () => {
                     onValueChange={(itemValue: string) => setEditCategory(itemValue)}
                 >
                 <Picker.Item label="カテゴリ" value="" />
+                <Picker.Item label="ジャケット/アウター" value="outerwear" />
                 <Picker.Item label="トップス" value="tops" />
-                <Picker.Item label="ボトムス" value="bottoms" />
-                <Picker.Item label="アウター" value="outerwear" />
+                <Picker.Item label="パンツ" value="pants" />
+                <Picker.Item label="スカート" value="skirt" />
+                <Picker.Item label="ワンピース/ドレス" value="onepiece" />
                 <Picker.Item label="その他" value="other" />
                 </Picker>
             </View>
