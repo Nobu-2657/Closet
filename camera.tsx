@@ -73,27 +73,40 @@ const CameraScreen: React.FC = () => {
                 if (!userId) {
                     throw new Error('User ID not found');
                 }
+
+                // FormDataの作成を修正
+                const formData = new FormData();
+                formData.append('image', {
+                    uri: `data:image/jpeg;base64,${photo}`,
+                    type: 'image/jpeg',
+                    name: 'photo.jpg'
+                } as any);
+                formData.append('userId', userId);
+                formData.append('name', clothesName);
+                formData.append('category', category);
+                formData.append('temperature', temperature.toString());
+
                 const response = await fetch(`http://${config.serverIP}:3001/api/upload`, {
                     method: 'POST',
+                    body: formData,
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Content-Type': 'multipart/form-data',
                     },
-                    body: JSON.stringify({
-                        image: photo,
-                        userId: userId,
-                        name: clothesName,
-                        category: category,
-                        temperature: temperature
-                    }),
                 });
+
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    const errorData = await response.text();
+                    console.error('Server response:', errorData);
+                    throw new Error(`Upload failed: ${errorData}`);
                 }
+
                 const data = await response.json();
-                console.log('Photo uploaded successfully:', data);
+                console.log('Upload success:', data);
                 navigation.goBack();
             } catch (error) {
                 console.error('Error uploading photo:', error);
+                // エラーメッセージをユーザーに表示することも検討
             }
         }
     };

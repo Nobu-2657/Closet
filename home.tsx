@@ -4,6 +4,9 @@ import { Entypo, Feather, FontAwesome6, Ionicons, MaterialIcons } from '@expo/ve
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import config from '@/config';
+import { useNavigation } from '@react-navigation/native';
+import CustomButton from './customButton';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 const OPENWEATHERMAP_API_KEY = process.env.EXPO_PUBLIC_OPENWEATHERMAP_API_KEY; //APIキー
 
@@ -48,7 +51,8 @@ const weatherDescriptions: { [key: string]: string } = {
 
 type ClothingItem = {
     id: string;
-    base64: string;
+    imageUrl?: string;  // 新しい画像URL用
+    base64?: string;    // 既存のbase64データ用
     name: string;
     category: string;
     temperature: number;
@@ -61,6 +65,32 @@ const categoryMap: { [key: string]: string } = {
     'bottoms': 'パンツ',
     'other': 'その他'
 };
+
+const categoryOrder: { [key: string]: number } = {
+    'outerwear': 1,
+    'tops': 2,
+    'bottoms': 3,
+    'other': 4
+};
+
+// 型定義
+type RootStackParamList = {
+    Login: undefined;
+    Register: undefined;
+    Main: undefined;
+    Closet: undefined;
+    Camera: undefined;
+    OutfitSelection: undefined;
+    Feedback: undefined; 
+};
+
+type Location = {
+    lat: number;
+    lon: number;
+    name?: string;
+};
+
+type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Main'>;
 
 export default function HomeScreen() {
     const [temperature, setTemperature] = useState<number | null>(null);
@@ -78,6 +108,8 @@ export default function HomeScreen() {
     const [clothes, setClothes] = useState<ClothingItem[]>([]);
     const [rainProbability, setRainProbability] = useState<number | null>(null);
 
+    const navigation = useNavigation<HomeScreenNavigationProp>();
+
     const fetchWeather = async (lat: number, lon: number) => {
         try {
             setLoading(true);
@@ -86,6 +118,7 @@ export default function HomeScreen() {
 
             if (response.ok) {
                 setTemperature(Math.round(data.main.temp));
+                await AsyncStorage.setItem('currentTemperature', Math.round(data.main.temp).toString());
                 const englishDescription = data.weather[0].main.toLowerCase();
                 setWeatherDescription(weatherDescriptions[englishDescription] || '不明');
                 setWeatherIcon(weatherIcons[englishDescription] || 'help');
@@ -108,13 +141,26 @@ export default function HomeScreen() {
     };
 
     useEffect(() => {
-        if (location) {
-            fetchWeather(location.lat, location.lon);
-        } else {
-            // 初期値として東京の位置情報を使用
-            fetchWeather(35.6895, 139.6917);
-        }
-    }, [location]);
+        const initializeLocationAndWeather = async () => {
+            await getCurrentLocation();
+            if (location) {
+                await fetchWeather(location.lat, location.lon);
+            }
+        };
+
+        // 初回実行
+        initializeLocationAndWeather();
+
+        // 5分ごとに更新するインターバルを設定
+        const interval = setInterval(() => {
+            initializeLocationAndWeather();
+        }, 5 * 60 * 1000); // 5分 = 5 * 60 * 1000ミリ秒
+
+        // クリーンアップ関数
+        return () => {
+            clearInterval(interval);
+        };
+    }, []);
 
     const getCurrentLocation = async () => {
         try {
@@ -123,12 +169,10 @@ export default function HomeScreen() {
                 setError('位置情報の許可が必要です');
                 return;
             }
-
             let location = await Location.getCurrentPositionAsync({});
-            setLocation({
-                lat: location.coords.latitude,
-                lon: location.coords.longitude
-            });
+            const newLocation = { lat: location.coords.latitude, lon: location.coords.longitude };
+            setLocation(newLocation);
+            await fetchWeather(newLocation.lat, newLocation.lon);
         } catch (err) {
             setError('位置情報の取得に失敗しました');
         }
@@ -169,27 +213,73 @@ export default function HomeScreen() {
         }
     };
 
-    const categories = [...new Set(filteredClothes.map(item => item.category))];
+    const categories = [...new Set(filteredClothes
+        .filter(item => 
+            item.temperature != null &&
+            temperature != null &&
+            Math.abs(item.temperature - temperature) <= 5
+        )
+        .map(item => item.category))]
+        .sort((a, b) => (categoryOrder[a] || Number.MAX_SAFE_INTEGER) - (categoryOrder[b] || Number.MAX_SAFE_INTEGER));
+
+    const getImageSource = (item: ClothingItem) => {
+        if (item.imageUrl) {
+            const fullUrl = item.imageUrl.startsWith('http') 
+                ? item.imageUrl 
+                : `http://${config.serverIP}:3001${item.imageUrl}`;
+            console.log('画像URL:', fullUrl); // デバッグ用
+            return { uri: fullUrl };
+        } else if (item.base64) {
+            return { uri: `data:image/jpeg;base64,${item.base64}` };
+        }
+        return require('../images/default-image.png');
+    };
 
     const renderItem = ({ item }: { item: ClothingItem }) => (
         <TouchableOpacity onPress={() => setSelectedItem(item)} style={styles.itemContainer}>
-            <Image source={{ uri: item.base64 ? `data:image/jpeg;base64,${item.base64}` : undefined }} style={styles.image} />
+            <Image 
+                source={getImageSource(item)}
+                style={styles.image} 
+            />
         </TouchableOpacity>
     );
 
-    const renderCategory = ({ item }: { item: string }) => (
-        <View>
+    const renderCategory = ({ item }: { item: string }) => {
+        const clothesInTemperatureRange = filteredClothes.filter(cloth => 
+            cloth.category === item && 
+            cloth.temperature != null &&
+            temperature != null &&
+            Math.abs(cloth.temperature - temperature) <= 5
+        );
+        
+        if (clothesInTemperatureRange.length === 0) {
+            return null;
+        }
+        
+        return (
+            <View>
             <Text style={styles.categoryTitle}>{categoryMap[item] || item}</Text>
             <FlatList
-                data={filteredClothes.filter(cloth => cloth.category === item)}
+                data={clothesInTemperatureRange}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.imageList}
             />
-        </View>
-    );    
+            </View>
+        );
+    };
+
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', () => {
+            if (userId) {
+                fetchClothes(userId);
+            }
+        });
+
+        return unsubscribe;
+    }, [navigation, userId]);
 
     return (
         <>
@@ -241,6 +331,12 @@ export default function HomeScreen() {
                     keyExtractor={(item) => item}
                 />
             </View>
+            <TouchableOpacity 
+                style={styles.floatingButton} 
+                onPress={() => navigation.navigate('OutfitSelection')}
+            >
+                <Ionicons name="walk" size={30} color="#000" />
+            </TouchableOpacity>
         </>
     );
 }
@@ -350,17 +446,34 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
     },
     itemContainer: {
-        width: width / 3, // 画面幅の1/3に設定
+        width: 100,
+        height: 100,
         marginRight: 10,
         alignItems: 'center',
     },
     image: {
         width: '100%',
-        height: 100, // 適切な高さに調整
+        height: '100%',    // 親コンテナの高さに合わせる
         borderRadius: 5,
     },
     itemName: {
         marginTop: 5,
         textAlign: 'center',
+    },
+    floatingButton: {
+        position: 'absolute', // 画面上の位置を固定
+        bottom: 20, // 下からの距離
+        right: 20, // 右からの距離
+        width: 60, // ボタンの幅
+        height: 60, // ボタンの高さ
+        borderRadius: 30, // 丸い形状
+        backgroundColor: 'white', // ボタンの背景色
+        justifyContent: 'center', // アイコンを中央に配置
+        alignItems: 'center', // アイコンを中央に配置
+        shadowColor: '#000', // ボタンに影を追加
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5, // Android向け影効果
     },
 });
