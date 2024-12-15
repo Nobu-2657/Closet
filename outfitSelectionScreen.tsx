@@ -110,7 +110,7 @@ const OutfitSelectionScreen = () => {
         if (selectedOutfit.length === 0) {
             Alert.alert(
                 "エラー",
-                "服を選択してください",
+                "え？裸で行くの？w",
                 [
                     { text: "OK" }
                 ]
@@ -345,6 +345,8 @@ const OutfitSelectionScreen = () => {
                     >
                         <AntDesign name="left" size={24} color="black" />
                     </TouchableOpacity>
+                    
+                    <Text style={styles.screenTitle}>服を選択</Text>
                     
                     <View style={styles.temperatureContainer}>
                         {temperature !== null && (
@@ -633,6 +635,10 @@ const styles = StyleSheet.create({
     greetingIcon: {
         marginTop: 10,
         marginLeft: 90,
+    },
+    screenTitle: {
+        fontSize: 18,
+        marginLeft: 10,
     },
 });
 
