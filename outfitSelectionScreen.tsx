@@ -59,6 +59,7 @@ const OutfitSelectionScreen = () => {
         latitude: 35.681236,
         longitude: 139.767125
     });
+    const [showFloatingMessage, setShowFloatingMessage] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -117,7 +118,16 @@ const OutfitSelectionScreen = () => {
                 }),
             });
             if (!response.ok) throw new Error('服の登録に失敗しました');
-            navigation.goBack();
+            
+            // フローティングメッセージを表示
+            setShowFloatingMessage(true);
+            
+            // 2秒後にメッセージを非表示にしてホーム画面に戻る
+            setTimeout(() => {
+                setShowFloatingMessage(false);
+                navigation.goBack();
+            }, 2000);
+            
             console.log('服が正常に登録されました');
         } catch (error) {
             console.error('服の登録エラー:', error);
@@ -391,6 +401,11 @@ const OutfitSelectionScreen = () => {
                     </View>
                 </TouchableOpacity>
             </Modal>
+            {showFloatingMessage && (
+                <View style={styles.floatingMessageContainer}>
+                    <Text style={styles.floatingMessageText}>いってらっしゃい！</Text>
+                </View>
+            )}
         </>
     );
 };
@@ -536,6 +551,23 @@ const styles = StyleSheet.create({
     temperatureText: {
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    floatingMessageContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'white',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+    },
+    floatingMessageText: {
+        color: 'black',
+        fontSize: 24,
+        fontWeight: 'bold',
+        textAlign: 'center',
     },
 });
 
