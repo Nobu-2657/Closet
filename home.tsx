@@ -107,6 +107,7 @@ export default function HomeScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [clothes, setClothes] = useState<ClothingItem[]>([]);
     const [rainProbability, setRainProbability] = useState<number | null>(null);
+    const [displayName, setDisplayName] = useState<string>('');
 
     const navigation = useNavigation<HomeScreenNavigationProp>();
 
@@ -281,6 +282,18 @@ export default function HomeScreen() {
         return unsubscribe;
     }, [navigation, userId]);
 
+    useEffect(() => {
+        const fetchDisplayName = async () => {
+            try {
+                const name = await AsyncStorage.getItem('displayName');
+                setDisplayName(name || '');
+            } catch (error) {
+                console.error('Error fetching display name:', error);
+            }
+        };
+        fetchDisplayName();
+    }, []);
+
     return (
         <>
             <View style={styles.logoContainer}>
@@ -324,7 +337,9 @@ export default function HomeScreen() {
                 )}
             </View>
             <View style={styles.clothesContainer}>
-            <Text style={styles.promptText}>今日は何を着ますか？</Text>
+            <Text style={styles.promptText}>
+                {displayName ? `${displayName}さん、今日は何を着ますか？` : '今日は何を着ますか？'}
+            </Text>
                 <FlatList
                     data={categories}
                     renderItem={renderCategory}
@@ -463,7 +478,7 @@ const styles = StyleSheet.create({
     floatingButton: {
         position: 'absolute', // 画面上の位置を固定
         bottom: 20, // 下からの距離
-        right: 20, // 右からの距離
+        right: 20, // 右��らの距離
         width: 60, // ボタンの幅
         height: 60, // ボタンの高さ
         borderRadius: 30, // 丸い形状
