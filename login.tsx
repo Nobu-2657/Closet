@@ -21,11 +21,58 @@ const Login = ({ navigation }: Props) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [message, setMessage] = useState('');
+    const [emailError, setEmailError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
 
     const togglePasswordVisibility = () => {
       setShowPassword(!showPassword);
     }
+
+    const validateEmail = (email: string): boolean => {
+      const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+      return emailRegex.test(email);
+    };
+
+    const validatePassword = (password: string): boolean => {
+      // 最低8文字以上
+      const minLength = password.length >= 8;
+      
+      // 大文字を含む
+      const hasUpperCase = /[A-Z]/.test(password);
+      
+      // 小文字を含む
+      const hasLowerCase = /[a-z]/.test(password);
+      
+      // 数字を含む
+      const hasNumber = /[0-9]/.test(password);
+      
+      // 特殊文字を含む
+      const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+      
+      return minLength && hasUpperCase && hasLowerCase && hasNumber && hasSymbol;
+    };
+
+    const handleEmailChange = (text: string) => {
+        setEmail(text);
+        if (!text.trim()) {
+            setEmailError('メールアドレスを入力してください');
+        } else if (!validateEmail(text)) {
+            setEmailError('有効なメールアドレスを入力してください');
+        } else {
+            setEmailError('');
+        }
+    };
+
+    const handlePasswordChange = (text: string) => {
+        setPassword(text);
+        if (!text) {
+            setPasswordError('パスワードを入力してください');
+        } else if (!validatePassword(text)) {
+            setPasswordError('パスワードは8文字以上で、大文字・小文字・数字・記号をそれぞれ1つ以上含める必要があります');
+        } else {
+            setPasswordError('');
+        }
+    };
 
     const handleLogin = async () => {
       try {
@@ -69,18 +116,19 @@ const Login = ({ navigation }: Props) => {
         />
       </View>
       <TextInput
-        style={styles.input}
+        style={[styles.input, emailError ? styles.inputError : null]}
         placeholder="メールアドレス"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={handleEmailChange}
       />
+      {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
       <View style={styles.passwordContainer}>
         <TextInput
-          style={styles.passwordInput}
+          style={[styles.passwordInput, passwordError ? styles.inputError : null]}
           placeholder="パスワード"
           secureTextEntry={!showPassword}
           value={password}
-          onChangeText={setPassword}
+          onChangeText={handlePasswordChange}
         />
         <TouchableOpacity onPress={togglePasswordVisibility} style={styles.visibilityToggle}>
           <Ionicons 
@@ -90,8 +138,8 @@ const Login = ({ navigation }: Props) => {
           />
         </TouchableOpacity>
       </View>
+      {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
       <CustomButton title="ログイン" onPress={handleLogin} />
-      {message ? <Text>{message}</Text> : null}
       <CustomButton 
         title="新規登録はこちら"
         onPress={() => navigation.navigate('Register')}
@@ -144,6 +192,14 @@ const styles = StyleSheet.create({
       padding: 10,
       position: 'absolute',
       right: 0,
+    },
+    inputError: {
+        borderColor: 'red',
+    },
+    errorText: {
+        color: 'red',
+        fontSize: 12,
+        marginBottom: 5,
     },
 });
 

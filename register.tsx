@@ -4,7 +4,7 @@ import { View, TextInput, Button, Text, StyleSheet, Alert, Image, TouchableOpaci
 import { StackNavigationProp } from '@react-navigation/stack';
 import config from '../../config';
 import CustomButton from '../after_register/customButton';
-import { Ionicons } from '@expo/vector-icons'; // Expoを使用している場合
+import { AntDesign, Ionicons } from '@expo/vector-icons'; // Expoを使用している場合
 
 type RootStackParamList = {
   Login: undefined;
@@ -27,10 +27,67 @@ const Register = ({ navigation }: Props) => {
 
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [displayNameError, setDisplayNameError] = useState('');
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   }
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password: string): boolean => {
+    return password.length >= 8;
+  };
+
+  const handleDisplayNameChange = (text: string) => {
+    setDisplayName(text);
+    if (!text.trim()) {
+      setDisplayNameError('表示名を入力してください');
+    } else {
+      setDisplayNameError('');
+    }
+  };
+
+  const handleEmailChange = async (text: string) => {
+    setEmail(text);
+    if (!text.trim()) {
+      setEmailError('メールアドレスを入力してください');
+    } else if (!validateEmail(text)) {
+      setEmailError('有効なメールアドレスを入力してください');
+    } else {
+      try {
+        const response = await fetch(`http://${config.serverIP}:3000/api/check-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: text }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setEmailError('このメールアドレスは既に登録されています');
+        } else {
+          setEmailError('');
+        }
+      } catch (error) {
+        setEmailError('メールアドレスの確認中にエラーが発生しました');
+      }
+    }
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    if (!text) {
+      setPasswordError('パスワードを入力してください');
+    } else if (!validatePassword(text)) {
+      setPasswordError('パスワードは8文字以上である必要があります');
+    } else {
+      setPasswordError('');
+    }
+  };
 
   const validateInputs = () => {
     if (!email || !password) {
@@ -68,10 +125,22 @@ const Register = ({ navigation }: Props) => {
         throw new Error(result.message || '登録に失敗しました');
       }
 
-      // 表示名をAsyncStorageに保存
-      await AsyncStorage.setItem('displayName', displayName);
+      // 登録成功時の処理
+      if (result.user) {
+        // 表示名をAsyncStorageに保存
+        await AsyncStorage.setItem('displayName', displayName);
+        
+        // ユーザーIDをAsyncStorageに保存
+        if (result.user.id) {
+          await AsyncStorage.setItem('userId', result.user.id);
+        }
+        
+        // トーク��がある場合は保存
+        if (result.token) {
+          await AsyncStorage.setItem('userToken', result.token);
+        }
+      }
 
-      Alert.alert('成功', `登録が完了しました！表示名: ${displayName}`);
       navigation.navigate('Main');
     } catch (error) {
       if (error instanceof Error) {
@@ -88,7 +157,7 @@ const Register = ({ navigation }: Props) => {
         style={styles.backButton}
         onPress={() => navigation.navigate('Login')}
       >
-        <Ionicons name="arrow-back" size={24} color="black" />
+        <AntDesign name="left" size={24} color="black" />
       </TouchableOpacity>
       <View style={styles.logoContainer}>
         <Image 
@@ -98,24 +167,28 @@ const Register = ({ navigation }: Props) => {
         />
       </View>
       <TextInput
-        style={styles.input}
+        style={[styles.input, displayNameError ? styles.inputError : null]}
         placeholder="表示名"
         value={displayName}
-        onChangeText={setDisplayName}
+        onChangeText={handleDisplayNameChange}
       />
+      {displayNameError ? <Text style={styles.errorText}>{displayNameError}</Text> : null}
+
       <TextInput
-        style={styles.input}
+        style={[styles.input, emailError ? styles.inputError : null]}
         placeholder="メールアドレス"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={handleEmailChange}
       />
+      {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+
       <View style={styles.passwordContainer}>
         <TextInput
-          style={styles.passwordInput}
+          style={[styles.passwordInput, passwordError ? styles.inputError : null]}
           placeholder="パスワード"
           secureTextEntry={!showPassword}
           value={password}
-          onChangeText={setPassword}
+          onChangeText={handlePasswordChange}
         />
         <TouchableOpacity onPress={togglePasswordVisibility} style={styles.visibilityToggle}>
           <Ionicons 
@@ -125,6 +198,8 @@ const Register = ({ navigation }: Props) => {
           />
         </TouchableOpacity>
       </View>
+      {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+
       <CustomButton title="新規登録" onPress={handleRegister} />
       {message ? <Text>{message}</Text> : null}
     </View>
@@ -133,6 +208,7 @@ const Register = ({ navigation }: Props) => {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     padding: 20,
     backgroundColor: 'white',
     justifyContent: 'center',
@@ -144,7 +220,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 300, // ロゴの幅を指定
     height: 100, // ロゴの高さを指定
-    marginTop: 120,
     marginBottom: 80, // ロゴとタイトルの間にスペースを追加
   },
   title: {
@@ -187,6 +262,14 @@ const styles = StyleSheet.create({
     top: 40,
     left: 20,
     zIndex: 1,
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 5,
   },
 });
 
