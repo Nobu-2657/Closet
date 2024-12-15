@@ -304,6 +304,15 @@ const OutfitSelectionScreen = () => {
                     >
                         <AntDesign name="left" size={24} color="black" />
                     </TouchableOpacity>
+                    
+                    <View style={styles.temperatureContainer}>
+                        {temperature !== null && (
+                            <Text style={styles.temperatureText}>
+                                {Math.round(temperature)}℃
+                            </Text>
+                        )}
+                    </View>
+                    
                     <TouchableOpacity 
                         style={styles.mapButton}
                         onPress={() => {
@@ -515,6 +524,14 @@ const styles = StyleSheet.create({
     },
     modalBackButton: {
         padding: 10,
+    },
+    temperatureContainer: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    temperatureText: {
+        fontSize: 18,
+        fontWeight: 'bold',
     },
 });
 
