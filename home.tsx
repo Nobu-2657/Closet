@@ -62,15 +62,19 @@ type ClothingItem = {
 const categoryMap: { [key: string]: string } = {
     'outerwear': 'ジャケット/アウター',
     'tops': 'トップス',
-    'bottoms': 'パンツ',
+    'pants': 'パンツ',
+    'skirt': 'スカート',
+    'onepiece': 'ワンピース/ドレス',
     'other': 'その他'
 };
 
 const categoryOrder: { [key: string]: number } = {
     'outerwear': 1,
     'tops': 2,
-    'bottoms': 3,
-    'other': 4
+    'pants': 3,
+    'skirt': 4,
+    'onepiece': 5,
+    'other': 6
 };
 
 // 型定義

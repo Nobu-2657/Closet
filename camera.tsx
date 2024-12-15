@@ -160,8 +160,8 @@ const CameraScreen: React.FC = () => {
                         >
                             <Picker.Item label="カテゴリ" value="" />
                             <Picker.Item label="トップス" value="tops" />
-                            <Picker.Item label="ボトムス" value="bottoms" />
-                            <Picker.Item label="アウター" value="outerwear" />
+                            <Picker.Item label="パンツ" value="pants" />
+                            <Picker.Item label="ジャケット/アウター" value="outerwear" />
                             <Picker.Item label="その他" value="other" />
                         </Picker>
                     </View>
