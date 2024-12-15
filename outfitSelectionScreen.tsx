@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Modal, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Modal, Dimensions, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapView, { Marker } from 'react-native-maps';
-import { AntDesign, Entypo, Ionicons } from '@expo/vector-icons';
+import { AntDesign, Entypo, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import CustomButton from './customButton';
 import config from '@/config';
 import { useNavigation } from '@react-navigation/native';
@@ -60,6 +60,7 @@ const OutfitSelectionScreen = () => {
         longitude: 139.767125
     });
     const [showFloatingMessage, setShowFloatingMessage] = useState(false);
+    const [greetingIcon, setGreetingIcon] = useState("human-greeting");
 
     useEffect(() => {
         const fetchData = async () => {
@@ -106,6 +107,17 @@ const OutfitSelectionScreen = () => {
     };
 
     const registerOutfit = async () => {
+        if (selectedOutfit.length === 0) {
+            Alert.alert(
+                "エラー",
+                "服を選択してください",
+                [
+                    { text: "OK" }
+                ]
+            );
+            return;
+        }
+
         try {
             const userId = await AsyncStorage.getItem('userId');
             const response = await fetch(`http://${config.serverIP}:3001/api/register-outfit`, {
@@ -119,10 +131,8 @@ const OutfitSelectionScreen = () => {
             });
             if (!response.ok) throw new Error('服の登録に失敗しました');
             
-            // フローティングメッセージを表示
             setShowFloatingMessage(true);
             
-            // 2秒後にメッセージを非表示にしてホーム画面に戻る
             setTimeout(() => {
                 setShowFloatingMessage(false);
                 navigation.goBack();
@@ -304,6 +314,23 @@ const OutfitSelectionScreen = () => {
         });
     };
 
+    useEffect(() => {
+        if (showFloatingMessage) {
+            const interval = setInterval(() => {
+                setGreetingIcon(prev => 
+                    prev === "human-greeting" ? "human-handsdown" : "human-greeting"
+                );
+            }, 500); // 0.5秒ごとに切り替え
+
+            // 2回切り替えた後に停止
+            setTimeout(() => {
+                clearInterval(interval);
+            }, 2000);
+
+            return () => clearInterval(interval);
+        }
+    }, [showFloatingMessage]);
+
     return (
         <>
             <View style={styles.logoContainer}>
@@ -403,7 +430,16 @@ const OutfitSelectionScreen = () => {
             </Modal>
             {showFloatingMessage && (
                 <View style={styles.floatingMessageContainer}>
-                    <Text style={styles.floatingMessageText}>いってらっしゃい！</Text>
+                    <View style={styles.speechBubble}>
+                        <Text style={styles.floatingMessageText}>いってらっしゃい！</Text>
+                        <View style={styles.speechBubbleTriangle} />
+                    </View>
+                    <MaterialCommunityIcons 
+                        name={greetingIcon} 
+                        size={60} 
+                        color="black" 
+                        style={styles.greetingIcon}
+                    />
                 </View>
             )}
         </>
@@ -546,7 +582,8 @@ const styles = StyleSheet.create({
     },
     temperatureContainer: {
         flex: 1,
-        alignItems: 'center',
+        alignItems: 'flex-end',
+        marginRight: 10,
     },
     temperatureText: {
         fontSize: 18,
@@ -568,6 +605,34 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         textAlign: 'center',
+    },
+    speechBubble: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        padding: 15,
+        marginBottom: 20,
+        borderWidth: 2,
+        borderColor: '#000',
+    },
+    speechBubbleTriangle: {
+        position: 'absolute',
+        bottom: -10,
+        left: '50%',
+        marginLeft: -10,
+        width: 0,
+        height: 0,
+        borderLeftWidth: 10,
+        borderRightWidth: 10,
+        borderTopWidth: 10,
+        borderStyle: 'solid',
+        backgroundColor: 'transparent',
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+        borderTopColor: '#000',
+    },
+    greetingIcon: {
+        marginTop: 10,
+        marginLeft: 90,
     },
 });
 

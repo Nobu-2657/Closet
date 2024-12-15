@@ -67,6 +67,16 @@ const CameraScreen: React.FC = () => {
     };
 
     const uploadPhoto = async () => {
+        if (!clothesName.trim()) {
+            alert('名称を入力してください');
+            return;
+        }
+
+        if (!category) {
+            alert('カテゴリを選択してください');
+            return;
+        }
+
         if (photo) {
             try {
                 const userId = await AsyncStorage.getItem('userId');
@@ -74,7 +84,6 @@ const CameraScreen: React.FC = () => {
                     throw new Error('User ID not found');
                 }
 
-                // FormDataの作成を修正
                 const formData = new FormData();
                 formData.append('image', {
                     uri: `data:image/jpeg;base64,${photo}`,
@@ -106,7 +115,6 @@ const CameraScreen: React.FC = () => {
                 navigation.goBack();
             } catch (error) {
                 console.error('Error uploading photo:', error);
-                // エラーメッセージをユーザーに表示することも検討
             }
         }
     };
@@ -243,6 +251,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 10,
         position: 'relative',
+        width: '100%',
     },
     cameraBackButton: {
         position: 'absolute',
@@ -256,12 +265,15 @@ const styles = StyleSheet.create({
         zIndex: 1,
         height: '100%',
         justifyContent: 'center',
+        width: 40,
     },
     input: {
         flex: 1,
         height: 40,
+        paddingLeft: 50,
         paddingRight: 10,
         textAlign: 'center',
+        marginRight: 40,
     },
     preview: {
         aspectRatio: 1,

@@ -539,6 +539,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 10,
         position: 'relative',
+        width: '100%',
     },
     backButton: {
         position: 'absolute',
@@ -546,12 +547,15 @@ const styles = StyleSheet.create({
         zIndex: 1,
         height: '100%',
         justifyContent: 'center',
+        width: 40,
     },
     input: {
         flex: 1,
         height: 40,
+        paddingLeft: 50,
         paddingRight: 10,
         textAlign: 'center',
+        marginRight: 40,
     },
     preview: {
         aspectRatio: 1,
