@@ -111,17 +111,78 @@ const OutfitSelectionScreen = () => {
             Alert.alert(
                 "エラー",
                 "え？裸で行くの？w",
-                [
-                    { text: "OK" }
-                ]
+                [{ text: "OK" }]
             );
             return;
         }
 
         try {
             const userId = await AsyncStorage.getItem('userId');
-            const response = await fetch(`http://${config.serverIP}:3001/api/register-outfit`, {
+            if (!userId) {
+                throw new Error('ユーザーIDが見つかりません');
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+
+            const checkResponse = await fetch(`http://${config.serverIP}:3001/api/check-outfit`, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId,
+                    date: today
+                }),
+            });
+            
+            const responseText = await checkResponse.text();
+
+            if (!checkResponse.ok) {
+                throw new Error(`データの確認に失敗しました: ${responseText}`);
+            }
+
+            const { exists, outfitId } = JSON.parse(responseText);
+
+            if (exists) {
+                await updateOutfit(userId, outfitId);
+            } else {
+                const createNewOutfit = async (userId: string) => {
+                    try {
+                        const response = await fetch(`http://${config.serverIP}:3001/api/register-outfit`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                userId,
+                                date: new Date().toISOString(),
+                                clothesIds: selectedOutfit.map(item => item.id)
+                            }),
+                        });
+
+                        if (!response.ok) throw new Error('服の登録に失敗しました');
+
+                        showSuccessMessage();
+                    } catch (error) {
+                        console.error('新規登録エラー:', error);
+                    }
+                };
+                await createNewOutfit(userId);
+            }
+        } catch (error) {
+            console.error('服の登録エラー:', error);
+            if (error instanceof Error) {
+                console.error('エラーの詳細:', {
+                    message: error.message,
+                    stack: error.stack
+                });
+            } else {
+                console.error('不明なエラー:', error);
+            }
+        }
+    };
+
+    // 更新用の関数
+    const updateOutfit = async (userId: string, outfitId: string) => {
+        try {
+            const response = await fetch(`http://${config.serverIP}:3001/api/update-outfit/${outfitId}`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     userId,
@@ -129,19 +190,22 @@ const OutfitSelectionScreen = () => {
                     clothesIds: selectedOutfit.map(item => item.id)
                 }),
             });
-            if (!response.ok) throw new Error('服の登録に失敗しました');
-            
-            setShowFloatingMessage(true);
-            
-            setTimeout(() => {
-                setShowFloatingMessage(false);
-                navigation.goBack();
-            }, 2000);
-            
-            console.log('服が正常に登録されました');
+
+            if (!response.ok) throw new Error('服の更新に失敗しました');
+
+            showSuccessMessage();
         } catch (error) {
-            console.error('服の登録エラー:', error);
+            console.error('更新エラー:', error);
         }
+    };
+
+    // 成功メッセージの表示と画面遷移
+    const showSuccessMessage = () => {
+        setShowFloatingMessage(true);
+        setTimeout(() => {
+            setShowFloatingMessage(false);
+            navigation.goBack();
+        }, 2000);
     };
 
     const getImageSource = useCallback((item: ClothingItem) => {

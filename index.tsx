@@ -52,23 +52,23 @@ function TabNavigator() {
 
   const scheduleDailyNotification = async () => {
     try {
-      //await Notifications.cancelAllScheduledNotificationsAsync();
       await Notifications.scheduleNotificationAsync({
         content: {
           title: 'フィードバックのお時間です！',
-          body: '今日着た服についてフィードバックをお願いします。',
+          body: '今日のコーデについてフィードバックをお願いします。',
           data: { screen: 'FeedbackScreen' },
+          priority: 'high',
+          vibrate: [0, 250, 250, 250],
         },
         trigger: {
-        //type: 'calendar',
-        hour: 8,
-        minute: 38,
-        repeats: true,
-      } as Notifications.NotificationTriggerInput,
+          hour: 20,
+          minute: 30,
+          repeats: true,
+          timezone: 'Asia/Tokyo'
+        },
       });
-      console.log('Notification scheduled successfully');
     } catch (error) {
-      console.error('Error scheduling notification:', error);
+      console.log('通知のスケジュール設定エラー:', error);
     }
   };
 
@@ -87,23 +87,41 @@ function TabNavigator() {
           return;
         }
       }
-      //await scheduleDailyNotification();
-      //await getScheduledNotifications();
+      await scheduleDailyNotification();
+      await getScheduledNotifications();
     };
   
     setupNotifications();
   }, []);  
   
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
-      const screen = response.notification.request.content.data?.screen as keyof RootStackParamList;
-      if (screen && screen === 'FeedbackScreen') {
+    const foregroundSubscription = Notifications.addNotificationReceivedListener(notification => {
+      console.log('フォアグラウンド通知を受信:', notification);
+    });
+
+    const backgroundSubscription = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('通知タップ時のレスポンス:', response);
+      
+      if (Platform.OS === 'android') {
+        setTimeout(() => {
+          navigation.reset({
+            index: 0,
+            routes: [
+              { name: 'Main' },
+              { name: 'FeedbackScreen' }
+            ],
+          });
+        }, 1000);
+      } else {
         navigation.navigate('FeedbackScreen');
       }
     });
 
-    return () => subscription.remove();
-  }, [navigation]);
+    return () => {
+      foregroundSubscription.remove();
+      backgroundSubscription.remove();
+    };
+  }, []);
 
   return (
     <Tab.Navigator
@@ -117,11 +135,6 @@ function TabNavigator() {
             iconName = focused ? 'shirt' : 'shirt-outline';
           } else if (route.name === 'レジスター') {
             iconName = focused ? 'add-circle' : 'add-circle-outline';
-            return (
-              <TouchableOpacity onPress={handlePlusButtonPress}>
-                <Ionicons name={iconName} size={size} color={color} />
-              </TouchableOpacity>
-            );
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -164,7 +177,7 @@ export default function App() {
           }}
         />
         <Stack.Screen options={{ headerShown: false}} name="OutfitSelection" component={OutfitSelection} />
-        <Stack.Screen options={{ headerShown: true, title: 'フィードバック' }} name="FeedbackScreen" component={Feedback} />
+        <Stack.Screen options={{ headerShown: false}} name="FeedbackScreen" component={Feedback} />
       </Stack.Navigator>
   );
 }
