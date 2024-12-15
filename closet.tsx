@@ -139,7 +139,7 @@ const ClosetScreen = () => {
             <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowFilterModal(false)}>
                 <View style={styles.modalContent}>
                     <Text style={styles.modalTitle}>カテゴリ</Text>
-                    {['outerwear', 'tops', 'bottoms', 'other'].map((category) => (
+                    {['outerwear', 'tops', 'pants', 'skirt', 'onepiece', 'other'].map((category) => (
                         <TouchableOpacity key={category} style={styles.checkboxContainer} onPress={() => toggleCategory(category)}>
                             <View style={[styles.checkbox, selectedCategories.includes(category) && styles.checked]}>
                                 {selectedCategories.includes(category) && (
