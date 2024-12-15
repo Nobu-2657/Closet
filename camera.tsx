@@ -159,9 +159,11 @@ const CameraScreen: React.FC = () => {
                             onValueChange={(itemValue: React.SetStateAction<string>) => setCategory(itemValue)}
                         >
                             <Picker.Item label="カテゴリ" value="" />
+                            <Picker.Item label="ジャケット/アウター" value="outerwear" />
                             <Picker.Item label="トップス" value="tops" />
                             <Picker.Item label="パンツ" value="pants" />
-                            <Picker.Item label="ジャケット/アウター" value="outerwear" />
+                            <Picker.Item label="スカート" value="skirt" />
+                            <Picker.Item label="ワンピース/ドレス" value="onepiece" />
                             <Picker.Item label="その他" value="other" />
                         </Picker>
                     </View>
