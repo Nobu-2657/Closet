@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, Image, FlatList, RefreshControl, TextInput, TouchableOpacity, Text, Modal, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, Dimensions, Image, FlatList, RefreshControl, TextInput, TouchableOpacity, Text, Modal, ScrollView, Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AntDesign, Ionicons, Octicons } from '@expo/vector-icons';
 import config from '@/config';
@@ -256,6 +256,22 @@ const ClosetScreen = () => {
         const [editTemperature, setEditTemperature] = useState(selectedItem?.temperature || 20);
 
         const updateItem = async () => {
+            // バリデーションチェック
+            if (!editName.trim()) {
+                Alert.alert('エラー', '名称を入力してください');
+                return;
+            }
+
+            if (editName.length > 50) {
+                Alert.alert('エラー', '名称は50文字以内で入力してください');
+                return;
+            }
+
+            if (!editCategory) {
+                Alert.alert('エラー', 'カテゴリを選択してください');
+                return;
+            }
+
             if (selectedItem && userId) {
                 try {
                     const response = await fetch(`http://${config.serverIP}:3001/api/update`, {
@@ -264,18 +280,19 @@ const ClosetScreen = () => {
                         body: JSON.stringify({
                             id: selectedItem.id,
                             userId: userId,
-                            name: editName,
+                            name: editName.trim(),  // 前後の空白を削除
                             category: editCategory,
                             temperature: editTemperature
                         }),
-                });
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                await fetchClothes(userId);
-                setSelectedItem(null);
+                    });
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    await fetchClothes(userId);
+                    setSelectedItem(null);
                 } catch (error) {
                     console.error('Error updating item:', error);
+                    Alert.alert('エラー', '更新に失敗しました');
                 }
             }
         };
@@ -362,12 +379,12 @@ const ClosetScreen = () => {
             </View>
             <View style={[styles.editButtonContainer, { width: '50%' }]}>
                 <CustomButton
-                    title="更新"
+                    title="お直し"
                     onPress={updateItem}
                 />
                 <View style={styles.buttonSpacer} />
                 <CustomButton
-                    title="削除"
+                    title="手放す"
                     onPress={deleteItem}
                     whiteBackground={true}
                 />

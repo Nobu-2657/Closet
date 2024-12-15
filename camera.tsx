@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Button, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Dimensions, Platform } from 'react-native';
+import { View, TextInput, Button, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Dimensions, Platform, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import config from '@/config';
@@ -68,12 +68,12 @@ const CameraScreen: React.FC = () => {
 
     const uploadPhoto = async () => {
         if (!clothesName.trim()) {
-            alert('名称を入力してください');
+            Alert.alert('エラー', '服の名前を入力してください');
             return;
         }
 
         if (!category) {
-            alert('カテゴリを選択してください');
+            Alert.alert('エラー', 'カテゴリを選択してください');
             return;
         }
 
