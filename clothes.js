@@ -39,7 +39,14 @@ const imageSchema = new mongoose.Schema({
     userId: { type: String, required: true },
     name: { type: String, required: true },
     category: { type: String, required: true },
-    temperature: { type: Number, required: true },
+    temperature: { 
+        type: Number, 
+        required: true,
+        validate: {
+            validator: Number.isInteger,
+            message: '温度は整数である必要があります'
+        }
+    },
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -51,6 +58,13 @@ const dailyInfoSchema = new mongoose.Schema({
     //returnTime: { type: String, required: true },
     clothesIds: { type: [String], required: true }
 }, { timestamps: true });
+
+// フィードバックモデルの定義
+const feedbackSchema = new mongoose.Schema({
+    userId: { type: String, required: true },
+    feedback: { type: Number, required: true },
+    date: { type: Date, required: true }
+});
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -190,6 +204,151 @@ app.delete('/api/delete', async (req, res) => {
     } catch (error) {
         console.error('Error deleting clothing:', error);
         res.status(500).json({ message: '衣類の削除中にエラーが発生しました' });
+    }
+});
+
+const Feedback = mongoose.model('Feedback', feedbackSchema);
+
+// フィードバックを処理するエンドポイント
+app.post('/api/submit-feedback', async (req, res) => {
+    try {
+        const { userId, feedback, date } = req.body;
+
+        // フィードバックを保存
+        const newFeedback = new Feedback({
+            userId,
+            feedback,
+            date
+        });
+        await newFeedback.save();
+
+        const dailyInfo = await DailyInfo.findOne({
+            userId,
+            date: {
+                $gte: new Date(new Date(date).setHours(0, 0, 0)),
+                $lt: new Date(new Date(date).setHours(23, 59, 59))
+            }
+        });
+
+        if (!dailyInfo) {
+            return res.status(404).json({ message: '着用した服の情報が見つかりません' });
+        }
+
+        const adjustmentFactor = (feedback - 3) * (- 0.5);
+
+        const categoryAdjustments = {
+            'outerwear': 1.0,
+            'tops': 0.8,
+            'pants': 0.6,
+            'skirt': 0.6,
+            'onepiece': 0.8,
+            'other': 0.5
+        };
+
+        for (const clothId of dailyInfo.clothesIds) {
+            const cloth = await Image.findById(clothId);
+            if (cloth) {
+                const categoryFactor = categoryAdjustments[cloth.category] || 0.5;
+                const temperatureAdjustment = Math.round(adjustmentFactor * categoryFactor);
+                const newTemperature = cloth.temperature + temperatureAdjustment;
+                
+                await Image.findByIdAndUpdate(
+                    clothId,
+                    { temperature: Math.round(newTemperature) }
+                );
+            }
+        }
+
+        res.status(200).json({ message: 'フィードバックが正常に処理されました' });
+    } catch (error) {
+        console.error('フィードバック処理エラー:', error);
+        res.status(500).json({ message: 'フィードバックの処理中にエラーが発生しました' });
+    }
+});
+
+// その日のdailyInfoを取得するエンドポイント
+app.get('/api/daily-info', async (req, res) => {
+    try {
+        const { userId, date } = req.query;
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const dailyInfo = await DailyInfo.findOne({
+            userId,
+            date: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+        });
+
+        res.json(dailyInfo);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching daily info' });
+    }
+});
+
+// 指定されたIDの服の情報を取得するエンドポイント
+app.post('/api/clothes-by-ids', async (req, res) => {
+    try {
+        const { clothesIds } = req.body;
+        const clothes = await Image.find({
+            _id: { $in: clothesIds }
+        });
+        res.json(clothes);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching clothes' });
+    }
+});
+
+// check-outfitエンドポイント
+app.post('/api/check-outfit', async (req, res) => {
+    const { userId, date } = req.body;
+    try {
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const outfit = await DailyInfo.findOne({
+            userId: userId,
+            date: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+        });
+
+        res.json({
+            exists: !!outfit,
+            outfitId: outfit ? outfit._id : null
+        });
+    } catch (error) {
+        console.error('Check outfit error:', error);
+        res.status(500).json({ error: '確認中にエラーが発生しました' });
+    }
+});
+
+// update-outfitエンドポイント
+app.put('/api/update-outfit/:id', async (req, res) => {
+    const { id } = req.params;
+    const { userId, clothesIds } = req.body;
+
+    try {
+        const updatedOutfit = await DailyInfo.findByIdAndUpdate(
+            id,
+            { clothesIds: clothesIds },
+            { new: true }
+        );
+
+        if (!updatedOutfit) {
+            return res.status(404).json({ error: '服装情報が見つかりません' });
+        }
+
+        res.json(updatedOutfit);
+    } catch (error) {
+        console.error('Update outfit error:', error);
+        res.status(500).json({ error: '更新中にエラーが発生しました' });
     }
 });
 
