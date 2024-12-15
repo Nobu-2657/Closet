@@ -18,6 +18,34 @@ const User = mongoose.model('User', {
     displayName: String
 });
 
+// メールアドレス重複チェックAPI
+app.post('/api/check-email', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // メールアドレスの存在確認
+        const existingUser = await User.findOne({ email });
+
+        if (existingUser) {
+        // メールアドレスが既に存在する場合
+        return res.status(400).json({
+            message: 'このメールアドレスは既に登録されています'
+        });
+        }
+
+        // メールアドレスが使用可能な場合
+        return res.status(200).json({
+        message: 'このメールアドレスは使用可能です'
+        });
+
+    } catch (error) {
+        console.error('メールアドレス確認中にエラーが発生しました:', error);
+        return res.status(500).json({
+        message: 'サーバーエラーが発生しました'
+        });
+    }
+});
+
 // 新規登録API
 app.post('/api/register', async (req, res) => {
     try {
