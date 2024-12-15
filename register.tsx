@@ -39,7 +39,22 @@ const Register = ({ navigation }: Props) => {
   };
 
   const validatePassword = (password: string): boolean => {
-    return password.length >= 8;
+    // 最低8文字以上
+    const minLength = password.length >= 8;
+    
+    // 大文字を含む
+    const hasUpperCase = /[A-Z]/.test(password);
+    
+    // 小文字を含む
+    const hasLowerCase = /[a-z]/.test(password);
+    
+    // 数字を含む
+    const hasNumber = /[0-9]/.test(password);
+    
+    // 特殊文字を含む
+    const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    
+    return minLength && hasUpperCase && hasLowerCase && hasNumber && hasSymbol;
   };
 
   const handleDisplayNameChange = (text: string) => {
@@ -83,7 +98,7 @@ const Register = ({ navigation }: Props) => {
     if (!text) {
       setPasswordError('パスワードを入力してください');
     } else if (!validatePassword(text)) {
-      setPasswordError('パスワードは8文字以上である必要があります');
+      setPasswordError('パスワードは8文字以上で、大文字・小文字・数字・記号をそれぞれ1つ以上含める必要があります');
     } else {
       setPasswordError('');
     }
