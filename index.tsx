@@ -61,20 +61,16 @@ function TabNavigator() {
           vibrate: [0, 250, 250, 250],
         },
         trigger: {
-          hour: 20,
-          minute: 30,
+          hour: 14,
+          minute: 15,
           repeats: true,
-          timezone: 'Asia/Tokyo'
-        },
+          timezone: 'Asia/Tokyo',
+          type: 'calendar',
+          },
       });
     } catch (error) {
       console.log('通知のスケジュール設定エラー:', error);
     }
-  };
-
-  const getScheduledNotifications = async () => {
-    const notifications = await Notifications.getAllScheduledNotificationsAsync();
-    console.log(notifications);
   };
 
   useEffect(() => {
@@ -88,18 +84,13 @@ function TabNavigator() {
         }
       }
       await scheduleDailyNotification();
-      await getScheduledNotifications();
     };
   
     setupNotifications();
   }, []);  
   
   useEffect(() => {
-    const foregroundSubscription = Notifications.addNotificationReceivedListener(notification => {
-      console.log('フォアグラウンド通知を受信:', notification);
-    });
-
-    const backgroundSubscription = Notifications.addNotificationResponseReceivedListener(response => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       console.log('通知タップ時のレスポンス:', response);
       
       if (Platform.OS === 'android') {
@@ -118,8 +109,7 @@ function TabNavigator() {
     });
 
     return () => {
-      foregroundSubscription.remove();
-      backgroundSubscription.remove();
+      subscription.remove();
     };
   }, []);
 
